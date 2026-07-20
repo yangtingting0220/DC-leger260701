@@ -75,14 +75,14 @@
       gap: 6px;
       cursor: pointer;
     }
-    .role-view {
+    .role-view, .list-view {
       display: none;
       background: #fff;
       border-radius: 8px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.06);
       padding: 24px;
     }
-    .role-view.active {
+    .role-view.active, .list-view.active {
       display: block;
     }
     .steps {
@@ -213,6 +213,10 @@
       background: #00b42a;
       color: #fff;
     }
+    .btn-default {
+      background: #f2f3f5;
+      color: #222;
+    }
     .lookup-form {
       margin-bottom: 20px;
       padding-bottom: 16px;
@@ -277,6 +281,81 @@
     .toast.show {
       opacity: 1;
     }
+    /* 台账列表新增样式 */
+    .filter-bar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: #f7f8fa;
+      border-radius: 6px;
+    }
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .filter-item select, .filter-item input {
+      width: auto;
+      min-width: 150px;
+    }
+    .status-tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #fff;
+    }
+    .status-pending-supplier {
+      background: #165DFF;
+    }
+    .status-pending-buyer {
+      background: #FF7D00;
+    }
+    .status-finished {
+      background: #00b42a;
+    }
+    /* 弹窗样式 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.show {
+      display: flex;
+    }
+    .modal-content {
+      background: #fff;
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 800px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #666;
+    }
   </style>
 </head>
 <body>
@@ -284,273 +363,337 @@
     <div class="topbar-inner">
       <div class="brand">代采台账 · 填报</div>
       <nav class="topbar-nav">
-        <a href="#" class="active">填报</a>
+        <a href="#fill" class="active" data-view="fill">填报</a>
+        <a href="#list" data-view="list">台账列表</a>
       </nav>
     </div>
   </header>
 
   <main class="container">
-    <section class="role-bar">
-      <span class="role-label">当前角色：</span>
-      <label class="role-opt"><input type="radio" name="role" value="applicant" checked /> 申请人</label>
-      <label class="role-opt"><input type="radio" name="role" value="supplier" /> 供应商</label>
-      <label class="role-opt"><input type="radio" name="role" value="buyer" /> 采购员</label>
-    </section>
+    <!-- 填报视图 -->
+    <div id="view-fill" class="fill-view active">
+      <section class="role-bar">
+        <span class="role-label">当前角色：</span>
+        <label class="role-opt"><input type="radio" name="role" value="applicant" checked /> 申请人</label>
+        <label class="role-opt"><input type="radio" name="role" value="supplier" /> 供应商</label>
+        <label class="role-opt"><input type="radio" name="role" value="buyer" /> 采购员</label>
+      </section>
 
-    <!-- 申请人视图 -->
-    <section id="view-applicant" class="role-view active">
-      <div class="steps">
-        <div class="step-item active"><span class="step-num">1</span><span class="step-label">申请人发起</span></div>
-        <div class="step-divider"></div>
-        <div class="step-item active"><span class="step-num">2</span><span class="step-label">费用归属</span></div>
-        <div class="step-divider"></div>
-        <div class="step-item pending"><span class="step-num">3</span><span class="step-label">采购信息（供应商填）</span></div>
-        <div class="step-divider"></div>
-        <div class="step-item pending"><span class="step-num">4</span><span class="step-label">发货确认（采购员填）</span></div>
-      </div>
+      <!-- 申请人视图 -->
+      <section id="view-applicant" class="role-view active">
+        <div class="steps">
+          <div class="step-item active"><span class="step-num">1</span><span class="step-label">申请人发起</span></div>
+          <div class="step-divider"></div>
+          <div class="step-item active"><span class="step-num">2</span><span class="step-label">费用归属</span></div>
+          <div class="step-divider"></div>
+          <div class="step-item pending"><span class="step-num">3</span><span class="step-label">采购信息（供应商填）</span></div>
+          <div class="step-divider"></div>
+          <div class="step-item pending"><span class="step-num">4</span><span class="step-label">发货确认（采购员填）</span></div>
+        </div>
 
-      <form id="form-applicant" enctype="multipart/form-data" novalidate>
-        <fieldset class="step-pane active">
-          <legend>步骤 1 · 申请人发起</legend>
-          <div class="row-readonly">
-            <div class="field">
-              <label>登记日期</label>
-              <input type="text" id="register_date" readonly />
+        <form id="form-applicant" enctype="multipart/form-data" novalidate>
+          <fieldset class="step-pane active">
+            <legend>步骤 1 · 申请人发起</legend>
+            <div class="row-readonly">
+              <div class="field">
+                <label>登记日期</label>
+                <input type="text" id="register_date" readonly />
+              </div>
+              <div class="field">
+                <label>单据编号</label>
+                <input type="text" id="document_no" readonly placeholder="提交后由系统生成" />
+              </div>
             </div>
             <div class="field">
-              <label>单据编号</label>
-              <input type="text" id="document_no" readonly placeholder="提交后由系统生成" />
+              <label>申请人姓名 <span class="req">*</span></label>
+              <input type="text" name="applicant_name" id="applicant_name" required maxlength="32" placeholder="请输入申请人姓名" />
             </div>
+            <div class="notice-block">
+              <strong>注意！</strong>
+              若本次申请<strong>仅需要代采代付款</strong>，请在下方需求描述中写明：
+              <ul>
+                <li>物料名称</li>
+                <li>规格型号</li>
+                <li>采购数量</li>
+                <li>单品单价</li>
+                <li>是否需要专票</li>
+                <li>是否含运费</li>
+              </ul>
+              <strong>以上信息缺一不可</strong>
+              并在「需求描述（图片）」中<strong>上传付款二维码</strong>，方便供应商扫码代付。
+            </div>
+            <div class="field">
+              <label>需求描述（文字）</label>
+              <textarea name="demand_desc_text" rows="3" maxlength="500" placeholder="请输入需求描述（选填）。代采代付时请按上方提示写明物料、规格、数量、单价、是否含专票、是否含运费"></textarea>
+            </div>
+            <div class="field">
+              <label>需求描述（图片）</label>
+              <input type="file" name="demand_image" id="demand_image" accept="image/*" multiple />
+              <div id="image-preview" class="image-preview"></div>
+            </div>
+            <div class="field">
+              <label>需求描述（链接）</label>
+              <input type="url" name="demand_link" maxlength="500" placeholder="https:// 选填" />
+            </div>
+          </fieldset>
+          <fieldset class="step-pane active">
+            <legend>步骤 2 · 费用归属</legend>
+            <div class="field">
+              <label>费用归属预算类型 <span class="req">*</span></label>
+              <select name="budget_type" id="budget_type" required>
+                <option value="">请选择</option>
+              </select>
+            </div>
+          </fieldset>
+          <div class="role-info">
+            提交后单据进入「待供应商补充」状态，供应商会在列表里看到并补充采购信息。
           </div>
+          <div class="actions">
+            <span></span>
+            <button type="submit" class="btn btn-primary" id="submit-applicant">提交申请</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 供应商视图 -->
+      <section id="view-supplier" class="role-view">
+        <div class="lookup-form">
           <div class="field">
-            <label>申请人姓名 <span class="req">*</span></label>
-            <input type="text" name="applicant_name" id="applicant_name" required maxlength="32" placeholder="请输入申请人姓名" />
+            <label>按单据编号或 ID 精确查找（可选）</label>
+            <input type="text" id="supplier_lookup" placeholder="如：20260717001 或 5" />
           </div>
-          <div class="notice-block">
-            <strong>注意！</strong>
-            若本次申请<strong>仅需要代采代付款</strong>，请在下方需求描述中写明：
-            <ul>
-              <li>物料名称</li>
-              <li>规格型号</li>
-              <li>采购数量</li>
-              <li>单品单价</li>
-              <li>是否需要专票</li>
-              <li>是否含运费</li>
-            </ul>
-            <strong>以上信息缺一不可</strong>
-            并在「需求描述（图片）」中<strong>上传付款二维码</strong>，方便供应商扫码代付。
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btn-supplier-lookup">加载该单据</button>
+            <button type="button" class="btn" id="btn-supplier-refresh">刷新下方列表</button>
           </div>
+        </div>
+        <div class="lookup-form">
+          <h3 class="preview-title">待补充采购信息的单据</h3>
+          <table class="ledger-table" id="supplier-pending-table">
+            <thead>
+              <tr>
+                <th>单据编号</th>
+                <th>登记日期</th>
+                <th>申请人</th>
+                <th>预算类型</th>
+                <th>需求描述</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="supplier-pending-body">
+              <tr><td colspan="6" class="empty">暂无待处理单据</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="supplier-detail-area" class="supplier-detail-area" style="display:none;">
+          <h3 class="preview-title">步骤 1 申请人填写（请参考，便于复制链接/图片）</h3>
+          <div id="supplier-step1-preview" class="detail-grid"></div>
+          <hr class="divider" />
+          <form id="form-supplier" enctype="multipart/form-data" novalidate>
+            <input type="hidden" name="ledger_id" id="supplier_ledger_id" />
+            <fieldset class="step-pane active">
+              <legend>步骤 3 · 采购信息（供应商填写）</legend>
+              <div class="row-2">
+                <div class="field">
+                  <label>物料名称 <span class="req">*</span></label>
+                  <input type="text" name="material_name" id="material_name" required maxlength="128" placeholder="如：无线鼠标" />
+                </div>
+                <div class="field">
+                  <label>规格型号 <span class="req">*</span></label>
+                  <input type="text" name="spec" id="spec" required maxlength="64" placeholder="如：Logitech M275" />
+                </div>
+              </div>
+              <div class="row-3">
+                <div class="field">
+                  <label>采购数量 <span class="req">*</span></label>
+                  <input type="number" name="quantity" id="quantity" min="1" step="1" required placeholder="正整数" />
+                </div>
+                <div class="field">
+                  <label>单品单价 <span class="req">*</span></label>
+                  <input type="number" name="unit_price" id="unit_price" min="0" step="0.01" required placeholder="0.00" />
+                </div>
+                <div class="field">
+                  <label>发票类型 <span class="req">*</span></label>
+                  <select name="invoice_type" id="invoice_type" required>
+                    <option value="">请选择</option>
+                    <option value="专票">专票</option>
+                    <option value="无票">无票</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row-3">
+                <div class="field">
+                  <label>是否含运费 <span class="req">*</span></label>
+                  <select name="shipping_included" id="shipping_included" required>
+                    <option value="">请选择</option>
+                    <option value="含运费">含运费</option>
+                    <option value="不含运费">不含运费</option>
+                  </select>
+                </div>
+                <div class="field" id="freight-field" style="display:none;">
+                  <label>运费金额 <span class="req">*</span></label>
+                  <input type="number" name="freight" id="freight" min="0" step="0.01" placeholder="0.00" />
+                </div>
+                <div class="field"></div>
+              </div>
+              <div class="row-2">
+                <div class="field">
+                  <label>采购金额（自动计算）</label>
+                  <input type="text" id="purchase_amount" value="0.00" readonly />
+                  <span class="hint">= 数量 × 单价 + 运费</span>
+                </div>
+                <div class="field">
+                  <label>代采总金额（自动计算）</label>
+                  <input type="text" id="total_price" value="0.00" readonly />
+                  <span class="hint">专票：(数量×单价 + 运费×1.13) × 1.05；无票：(数量×单价 + 运费) × 1.18</span>
+                </div>
+              </div>
+              <div class="field">
+                <label>供应商密码 <span class="req">*</span></label>
+                <input type="password" name="password" id="supplier_password" required autocomplete="off" />
+                <span class="hint">仅供应商本人持有，默认密码：supplier123</span>
+              </div>
+              <div class="actions">
+                <span></span>
+                <button type="submit" class="btn btn-primary" id="submit-supplier">提交采购信息</button>
+              </div>
+            </fieldset>
+          </form>
+        </div>
+      </section>
+
+      <!-- 采购员视图 -->
+      <section id="view-buyer" class="role-view">
+        <div class="lookup-form">
           <div class="field">
-            <label>需求描述（文字）</label>
-            <textarea name="demand_desc_text" rows="3" maxlength="500" placeholder="请输入需求描述（选填）。代采代付时请按上方提示写明物料、规格、数量、单价、是否含专票、是否含运费"></textarea>
+            <label>按单据编号或 ID 精确查找（可选）</label>
+            <input type="text" id="buyer_lookup" placeholder="如：20260717001 或 5" />
           </div>
-          <div class="field">
-            <label>需求描述（图片）</label>
-            <input type="file" name="demand_image" id="demand_image" accept="image/*" multiple />
-            <div id="image-preview" class="image-preview"></div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btn-buyer-lookup">加载该单据</button>
+            <button type="button" class="btn" id="btn-buyer-refresh">刷新下方列表</button>
           </div>
-          <div class="field">
-            <label>需求描述（链接）</label>
-            <input type="url" name="demand_link" maxlength="500" placeholder="https:// 选填" />
-          </div>
-        </fieldset>
-        <fieldset class="step-pane active">
-          <legend>步骤 2 · 费用归属</legend>
-          <div class="field">
-            <label>费用归属预算类型 <span class="req">*</span></label>
-            <select name="budget_type" id="budget_type" required>
-              <option value="">请选择</option>
+        </div>
+        <div class="lookup-form">
+          <h3 class="preview-title">待确认完结的单据</h3>
+          <table class="ledger-table" id="buyer-pending-table">
+            <thead>
+              <tr>
+                <th>单据编号</th>
+                <th>登记日期</th>
+                <th>申请人</th>
+                <th>物料名称</th>
+                <th>规格</th>
+                <th>采购数量</th>
+                <th>代采总金额</th>
+                <th>发票类型</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="buyer-pending-body">
+              <tr><td colspan="9" class="empty">暂无待处理单据</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="buyer-detail-area" class="buyer-detail-area" style="display:none;">
+          <h3 class="preview-title">单据详情（确认前请核对）</h3>
+          <div id="buyer-step1-preview" class="detail-grid"></div>
+          <hr class="divider" />
+          <form id="form-buyer" novalidate>
+            <input type="hidden" name="ledger_id" id="buyer_ledger_id" />
+            <fieldset class="step-pane active">
+              <legend>步骤 4 · 发货状态（采购员确认）</legend>
+              <div class="field">
+                <label>是否发货 <span class="req">*</span></label>
+                <select name="is_shipped" id="is_shipped" required>
+                  <option value="">请选择</option>
+                  <option value="已发货">已发货</option>
+                  <option value="未发货">未发货</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>发货备注</label>
+                <textarea name="ship_remark" rows="3" maxlength="500" placeholder="选填"></textarea>
+              </div>
+              <div class="field">
+                <label>确认采购员</label>
+                <input type="text" value="汪思雨" readonly />
+              </div>
+              <div class="field">
+                <label>采购员密码 <span class="req">*</span></label>
+                <input type="password" name="password" id="buyer_password" required autocomplete="off" />
+                <span class="hint">仅采购员汪思雨持有，默认密码：buyer123</span>
+              </div>
+              <div class="actions">
+                <span></span>
+                <button type="submit" class="btn btn-success" id="submit-buyer">确认完结</button>
+              </div>
+            </fieldset>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <!-- 台账列表视图 -->
+    <div id="view-list" class="list-view">
+      <div class="lookup-form">
+        <h3 class="preview-title">代采台账总览</h3>
+        <div class="filter-bar">
+          <div class="filter-item">
+            <label>状态筛选：</label>
+            <select id="filter-status">
+              <option value="">全部状态</option>
+              <option value="pending_supplier">待供应商补充</option>
+              <option value="pending_buyer">待采购员确认</option>
+              <option value="finished">已完结</option>
             </select>
           </div>
-        </fieldset>
-        <div class="role-info">
-          提交后单据进入「待供应商补充」状态，供应商会在列表里看到并补充采购信息。
+          <div class="filter-item">
+            <label>申请人筛选：</label>
+            <input type="text" id="filter-applicant" placeholder="输入申请人姓名" />
+          </div>
+          <div class="filter-item">
+            <label>预算类型筛选：</label>
+            <select id="filter-budget">
+              <option value="">全部预算</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <button type="button" class="btn btn-default" id="btn-reset-filter">重置筛选</button>
+            <button type="button" class="btn btn-primary" id="btn-refresh-ledger">刷新台账</button>
+          </div>
         </div>
-        <div class="actions">
-          <span></span>
-          <button type="submit" class="btn btn-primary" id="submit-applicant">提交申请</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- 供应商视图 -->
-    <section id="view-supplier" class="role-view">
-      <div class="lookup-form">
-        <div class="field">
-          <label>按单据编号或 ID 精确查找（可选）</label>
-          <input type="text" id="supplier_lookup" placeholder="如：20260717001 或 5" />
-        </div>
-        <div class="actions">
-          <button type="button" class="btn btn-primary" id="btn-supplier-lookup">加载该单据</button>
-          <button type="button" class="btn" id="btn-supplier-refresh">刷新下方列表</button>
-        </div>
-      </div>
-      <div class="lookup-form">
-        <h3 class="preview-title">待补充采购信息的单据</h3>
-        <table class="ledger-table" id="supplier-pending-table">
+        <table class="ledger-table" id="ledger-all-table">
           <thead>
             <tr>
               <th>单据编号</th>
               <th>登记日期</th>
               <th>申请人</th>
               <th>预算类型</th>
-              <th>需求描述</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody id="supplier-pending-body">
-            <tr><td colspan="6" class="empty">暂无待处理单据</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div id="supplier-detail-area" class="supplier-detail-area" style="display:none;">
-        <h3 class="preview-title">步骤 1 申请人填写（请参考，便于复制链接/图片）</h3>
-        <div id="supplier-step1-preview" class="detail-grid"></div>
-        <hr class="divider" />
-        <form id="form-supplier" enctype="multipart/form-data" novalidate>
-          <input type="hidden" name="ledger_id" id="supplier_ledger_id" />
-          <fieldset class="step-pane active">
-            <legend>步骤 3 · 采购信息（供应商填写）</legend>
-            <div class="row-2">
-              <div class="field">
-                <label>物料名称 <span class="req">*</span></label>
-                <input type="text" name="material_name" id="material_name" required maxlength="128" placeholder="如：无线鼠标" />
-              </div>
-              <div class="field">
-                <label>规格型号 <span class="req">*</span></label>
-                <input type="text" name="spec" id="spec" required maxlength="64" placeholder="如：Logitech M275" />
-              </div>
-            </div>
-            <div class="row-3">
-              <div class="field">
-                <label>采购数量 <span class="req">*</span></label>
-                <input type="number" name="quantity" id="quantity" min="1" step="1" required placeholder="正整数" />
-              </div>
-              <div class="field">
-                <label>单品单价 <span class="req">*</span></label>
-                <input type="number" name="unit_price" id="unit_price" min="0" step="0.01" required placeholder="0.00" />
-              </div>
-              <div class="field">
-                <label>发票类型 <span class="req">*</span></label>
-                <select name="invoice_type" id="invoice_type" required>
-                  <option value="">请选择</option>
-                  <option value="专票">专票</option>
-                  <option value="无票">无票</option>
-                </select>
-              </div>
-            </div>
-            <div class="row-3">
-              <div class="field">
-                <label>是否含运费 <span class="req">*</span></label>
-                <select name="shipping_included" id="shipping_included" required>
-                  <option value="">请选择</option>
-                  <option value="含运费">含运费</option>
-                  <option value="不含运费">不含运费</option>
-                </select>
-              </div>
-              <div class="field" id="freight-field" style="display:none;">
-                <label>运费金额 <span class="req">*</span></label>
-                <input type="number" name="freight" id="freight" min="0" step="0.01" placeholder="0.00" />
-              </div>
-              <div class="field"></div>
-            </div>
-            <div class="row-2">
-              <div class="field">
-                <label>采购金额（自动计算）</label>
-                <input type="text" id="purchase_amount" value="0.00" readonly />
-                <span class="hint">= 数量 × 单价 + 运费</span>
-              </div>
-              <div class="field">
-                <label>代采总金额（自动计算）</label>
-                <input type="text" id="total_price" value="0.00" readonly />
-                <span class="hint">专票：(数量×单价 + 运费×1.13) × 1.05；无票：(数量×单价 + 运费) × 1.18</span>
-              </div>
-            </div>
-            <div class="field">
-              <label>供应商密码 <span class="req">*</span></label>
-              <input type="password" name="password" id="supplier_password" required autocomplete="off" />
-              <span class="hint">仅供应商本人持有，默认密码：supplier123</span>
-            </div>
-            <div class="actions">
-              <span></span>
-              <button type="submit" class="btn btn-primary" id="submit-supplier">提交采购信息</button>
-            </div>
-          </fieldset>
-        </form>
-      </div>
-    </section>
-
-    <!-- 采购员视图 -->
-    <section id="view-buyer" class="role-view">
-      <div class="lookup-form">
-        <div class="field">
-          <label>按单据编号或 ID 精确查找（可选）</label>
-          <input type="text" id="buyer_lookup" placeholder="如：20260717001 或 5" />
-        </div>
-        <div class="actions">
-          <button type="button" class="btn btn-primary" id="btn-buyer-lookup">加载该单据</button>
-          <button type="button" class="btn" id="btn-buyer-refresh">刷新下方列表</button>
-        </div>
-      </div>
-      <div class="lookup-form">
-        <h3 class="preview-title">待确认完结的单据</h3>
-        <table class="ledger-table" id="buyer-pending-table">
-          <thead>
-            <tr>
-              <th>单据编号</th>
-              <th>登记日期</th>
-              <th>申请人</th>
               <th>物料名称</th>
-              <th>规格</th>
-              <th>采购数量</th>
               <th>代采总金额</th>
-              <th>发票类型</th>
+              <th>当前状态</th>
               <th>操作</th>
             </tr>
           </thead>
-          <tbody id="buyer-pending-body">
-            <tr><td colspan="9" class="empty">暂无待处理单据</td></tr>
+          <tbody id="ledger-all-body">
+            <tr><td colspan="8" class="empty">暂无台账数据</td></tr>
           </tbody>
         </table>
       </div>
-      <div id="buyer-detail-area" class="buyer-detail-area" style="display:none;">
-        <h3 class="preview-title">单据详情（确认前请核对）</h3>
-        <div id="buyer-step1-preview" class="detail-grid"></div>
-        <hr class="divider" />
-        <form id="form-buyer" novalidate>
-          <input type="hidden" name="ledger_id" id="buyer_ledger_id" />
-          <fieldset class="step-pane active">
-            <legend>步骤 4 · 发货状态（采购员确认）</legend>
-            <div class="field">
-              <label>是否发货 <span class="req">*</span></label>
-              <select name="is_shipped" id="is_shipped" required>
-                <option value="">请选择</option>
-                <option value="已发货">已发货</option>
-                <option value="未发货">未发货</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>发货备注</label>
-              <textarea name="ship_remark" rows="3" maxlength="500" placeholder="选填"></textarea>
-            </div>
-            <div class="field">
-              <label>确认采购员</label>
-              <input type="text" value="汪思雨" readonly />
-            </div>
-            <div class="field">
-              <label>采购员密码 <span class="req">*</span></label>
-              <input type="password" name="password" id="buyer_password" required autocomplete="off" />
-              <span class="hint">仅采购员汪思雨持有，默认密码：buyer123</span>
-            </div>
-            <div class="actions">
-              <span></span>
-              <button type="submit" class="btn btn-success" id="submit-buyer">确认完结</button>
-            </div>
-          </fieldset>
-        </form>
-      </div>
-    </section>
+    </div>
   </main>
+
+  <!-- 单据详情弹窗 -->
+  <div id="modal-detail" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>单据详情</h3>
+        <button class="modal-close" id="close-modal">&times;</button>
+      </div>
+      <div id="modal-body" class="detail-grid"></div>
+    </div>
+  </div>
 
   <div id="toast" class="toast"></div>
 
@@ -559,7 +702,7 @@
     const STORAGE_KEY = "dc_ledger_data";
     const SUPPLIER_PWD = "supplier123";
     const BUYER_PWD = "buyer123";
-    const BUDGET_LIST = ["行政办公预算","研发物料预算","市场推广预算","生产耗材预算","其他专项预算"];
+    const BUDGET_LIST = ["海外硬件","对外支持-低龄python","正式课履约/硬件","对外支持-谢安老师","对外支持-八宝","对外支持-于悦","对外支持-小布","上海研发预算-常规耗材","上海研发预算-新产品研发","上海研发预算-研发工具","其他：需找财务/采购确认该申请预算归属"];
     let ledgerData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     const $ = s => document.querySelector(s);
     const $$ = s => document.querySelectorAll(s);
@@ -572,6 +715,14 @@
         opt.value = item;
         opt.textContent = item;
         sel.appendChild(opt);
+      });
+      // 初始化台账筛选预算下拉
+      const filterBudgetSel = $("#filter-budget");
+      BUDGET_LIST.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.textContent = item;
+        filterBudgetSel.appendChild(opt);
       });
     }
 
@@ -605,7 +756,27 @@
     // 保存数据到本地存储
     function saveData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(ledgerData));
+      // 保存后刷新台账列表
+      refreshLedgerTable();
     }
+
+    // 顶部导航切换
+    $$(".topbar-nav a").forEach(link=>{
+      link.onclick = ()=>{
+        const view = link.dataset.view;
+        // 切换导航活跃状态
+        $$(".topbar-nav a").forEach(l=>l.classList.remove("active"));
+        link.classList.add("active");
+        // 切换视图
+        $(".fill-view").classList.remove("active");
+        $(".list-view").classList.remove("active");
+        $(`#view-${view}`).classList.add("active");
+        // 切换到台账列表时刷新数据
+        if(view === "list") {
+          refreshLedgerTable();
+        }
+      }
+    })
 
     // 角色切换
     $$("input[name='role']").forEach(radio=>{
@@ -860,10 +1031,110 @@
       refreshBuyerTable();
     }
 
+    // 台账列表模块
+    function getStatusText(status) {
+      const map = {
+        "pending_supplier": "待供应商补充",
+        "pending_buyer": "待采购员确认",
+        "finished": "已完结"
+      };
+      return map[status] || status;
+    }
+    function getStatusClass(status) {
+      const map = {
+        "pending_supplier": "status-pending-supplier",
+        "pending_buyer": "status-pending-buyer",
+        "finished": "status-finished"
+      };
+      return map[status] || "";
+    }
+    function refreshLedgerTable() {
+      const tbody = $("#ledger-all-body");
+      // 获取筛选条件
+      const statusFilter = $("#filter-status").value;
+      const applicantFilter = $("#filter-applicant").value.trim();
+      const budgetFilter = $("#filter-budget").value;
+      // 筛选数据
+      let list = ledgerData.filter(item=>{
+        const statusMatch = !statusFilter || item.status === statusFilter;
+        const applicantMatch = !applicantFilter || item.applicantName.includes(applicantFilter);
+        const budgetMatch = !budgetFilter || item.budgetType === budgetFilter;
+        return statusMatch && applicantMatch && budgetMatch;
+      });
+      if(list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty">暂无台账数据</td></tr>`;
+        return;
+      }
+      // 按登记日期倒序排列
+      list.sort((a,b)=>new Date(b.registerDate) - new Date(a.registerDate));
+      tbody.innerHTML = "";
+      list.forEach(item=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.docNo}</td>
+          <td>${item.registerDate}</td>
+          <td>${item.applicantName}</td>
+          <td>${item.budgetType}</td>
+          <td>${item.materialName||"-"}</td>
+          <td>${item.totalPrice.toFixed(2)}</td>
+          <td><span class="status-tag ${getStatusClass(item.status)}">${getStatusText(item.status)}</span></td>
+          <td><button class="btn btn-primary view-detail" data-id="${item.id}">查看详情</button></td>
+        `;
+        tbody.appendChild(tr);
+      })
+      // 绑定详情按钮
+      $$(".view-detail").forEach(btn=>{
+        btn.onclick = ()=> showDetailModal(Number(btn.dataset.id));
+      })
+    }
+    // 显示详情弹窗
+    function showDetailModal(id) {
+      const item = ledgerData.find(i=>i.id === id);
+      if(!item) return;
+      const modalBody = $("#modal-body");
+      modalBody.innerHTML = `
+        <div class="item"><b>单据编号</b>：${item.docNo}</div>
+        <div class="item"><b>登记日期</b>：${item.registerDate}</div>
+        <div class="item"><b>申请人</b>：${item.applicantName}</div>
+        <div class="item"><b>预算类型</b>：${item.budgetType}</div>
+        <div class="item"><b>当前状态</b>：${getStatusText(item.status)}</div>
+        <div class="item"><b>需求描述</b>：${item.demandText||"无"}</div>
+        <div class="item"><b>需求链接</b>：${item.demandLink||"无"}</div>
+        <div class="item"><b>物料名称</b>：${item.materialName||"无"}</div>
+        <div class="item"><b>规格型号</b>：${item.spec||"无"}</div>
+        <div class="item"><b>采购数量</b>：${item.qty||"-"}</div>
+        <div class="item"><b>单品单价</b>：${item.unitPrice?item.unitPrice.toFixed(2):"-"}</div>
+        <div class="item"><b>发票类型</b>：${item.invoiceType||"无"}</div>
+        <div class="item"><b>是否含运费</b>：${item.shipInclude||"无"}</div>
+        <div class="item"><b>运费金额</b>：${item.freight?item.freight.toFixed(2):"-"}</div>
+        <div class="item"><b>采购金额</b>：${item.purchaseAmount.toFixed(2)}</div>
+        <div class="item"><b>代采总金额</b>：${item.totalPrice.toFixed(2)}</div>
+        <div class="item"><b>发货状态</b>：${item.isShipped||"未填写"}</div>
+        <div class="item"><b>发货备注</b>：${item.shipRemark||"无"}</div>
+      `;
+      $("#modal-detail").classList.add("show");
+    }
+    // 关闭弹窗
+    $("#close-modal").onclick = ()=>{
+      $("#modal-detail").classList.remove("show");
+    }
+    // 筛选事件绑定
+    $("#filter-status").onchange = refreshLedgerTable;
+    $("#filter-applicant").oninput = refreshLedgerTable;
+    $("#filter-budget").onchange = refreshLedgerTable;
+    $("#btn-reset-filter").onclick = ()=>{
+      $("#filter-status").value = "";
+      $("#filter-applicant").value = "";
+      $("#filter-budget").value = "";
+      refreshLedgerTable();
+    }
+    $("#btn-refresh-ledger").onclick = refreshLedgerTable;
+
     // 页面初始化
     initBudgetSelect();
     refreshSupplierTable();
     refreshBuyerTable();
+    refreshLedgerTable();
   </script>
 </body>
 </html>

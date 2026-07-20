@@ -281,7 +281,7 @@
     .toast.show {
       opacity: 1;
     }
-    /* 台账列表新增样式 */
+    /* 台账列表筛选样式 */
     .filter-bar {
       display: flex;
       gap: 16px;
@@ -316,7 +316,7 @@
     .status-finished {
       background: #00b42a;
     }
-    /* 弹窗样式 */
+    /* 单据弹窗 */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -370,7 +370,7 @@
   </header>
 
   <main class="container">
-    <!-- 填报视图 -->
+    <!-- 填报页面容器 -->
     <div id="view-fill" class="fill-view active">
       <section class="role-bar">
         <span class="role-label">当前角色：</span>
@@ -379,7 +379,7 @@
         <label class="role-opt"><input type="radio" name="role" value="buyer" /> 采购员</label>
       </section>
 
-      <!-- 申请人视图 -->
+      <!-- 申请人表单视图 -->
       <section id="view-applicant" class="role-view active">
         <div class="steps">
           <div class="step-item active"><span class="step-num">1</span><span class="step-label">申请人发起</span></div>
@@ -455,7 +455,7 @@
         </form>
       </section>
 
-      <!-- 供应商视图 -->
+      <!-- 供应商操作视图 -->
       <section id="view-supplier" class="role-view">
         <div class="lookup-form">
           <div class="field">
@@ -562,7 +562,7 @@
         </div>
       </section>
 
-      <!-- 采购员视图 -->
+      <!-- 采购员操作视图 -->
       <section id="view-buyer" class="role-view">
         <div class="lookup-form">
           <div class="field">
@@ -634,7 +634,7 @@
       </section>
     </div>
 
-    <!-- 台账列表视图 -->
+    <!-- 台账列表总览页面 -->
     <div id="view-list" class="list-view">
       <div class="lookup-form">
         <h3 class="preview-title">代采台账总览</h3>
@@ -688,7 +688,7 @@
   <div id="modal-detail" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>单据详情</h3>
+        <h3>单据完整详情</h3>
         <button class="modal-close" id="close-modal">&times;</button>
       </div>
       <div id="modal-body" class="detail-grid"></div>
@@ -698,16 +698,29 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    // 全局常量
+    // 全局配置常量
     const STORAGE_KEY = "dc_ledger_data";
     const SUPPLIER_PWD = "supplier123";
     const BUYER_PWD = "buyer123";
-    const BUDGET_LIST = ["海外硬件","对外支持-低龄python","正式课履约/硬件","对外支持-谢安老师","对外支持-八宝","对外支持-于悦","对外支持-小布","上海研发预算-常规耗材","上海研发预算-新产品研发","上海研发预算-研发工具","其他：需找财务/采购确认该申请预算归属"];
+    // 修复后的完整预算下拉列表
+    const BUDGET_LIST = [
+      "海外硬件",
+      "对外支持-低龄python",
+      "正式课履约/硬件",
+      "对外支持-谢安老师",
+      "对外支持-八宝",
+      "对外支持-于悦",
+      "对外支持-小布",
+      "上海研发预算-常规耗材",
+      "上海研发预算-新产品研发",
+      "上海研发预算-研发工具",
+      "其他：需找财务/采购确认该申请预算归属"
+    ];
     let ledgerData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     const $ = s => document.querySelector(s);
     const $$ = s => document.querySelectorAll(s);
 
-    // 初始化预算下拉
+    // 初始化预算下拉框（核心修复函数）
     function initBudgetSelect() {
       const sel = $("#budget_type");
       BUDGET_LIST.forEach(item => {
@@ -716,7 +729,7 @@
         opt.textContent = item;
         sel.appendChild(opt);
       });
-      // 初始化台账筛选预算下拉
+      // 台账筛选预算下拉同步填充
       const filterBudgetSel = $("#filter-budget");
       BUDGET_LIST.forEach(item => {
         const opt = document.createElement("option");
@@ -726,7 +739,7 @@
       });
     }
 
-    // Toast提示
+    // 弹窗提示
     function toast(msg) {
       const t = $("#toast");
       t.textContent = msg;
@@ -741,7 +754,7 @@
       const day = String(d.getDate()).padStart(2,"0");
       return `${y}-${m}-${day}`;
     }
-    // 生成单据号
+    // 生成唯一单据编号
     function genDocNo() {
       const now = new Date();
       const y = now.getFullYear();
@@ -753,32 +766,26 @@
       return `${today}${serial}`;
     }
 
-    // 保存数据到本地存储
+    // 保存数据到本地存储并刷新台账
     function saveData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(ledgerData));
-      // 保存后刷新台账列表
       refreshLedgerTable();
     }
 
-    // 顶部导航切换
+    // 顶部导航切换 填报/台账列表
     $$(".topbar-nav a").forEach(link=>{
       link.onclick = ()=>{
         const view = link.dataset.view;
-        // 切换导航活跃状态
         $$(".topbar-nav a").forEach(l=>l.classList.remove("active"));
         link.classList.add("active");
-        // 切换视图
         $(".fill-view").classList.remove("active");
         $(".list-view").classList.remove("active");
         $(`#view-${view}`).classList.add("active");
-        // 切换到台账列表时刷新数据
-        if(view === "list") {
-          refreshLedgerTable();
-        }
+        if(view === "list") refreshLedgerTable();
       }
     })
 
-    // 角色切换
+    // 角色切换逻辑
     $$("input[name='role']").forEach(radio=>{
       radio.onchange = ()=>{
         const val = radio.value;
@@ -789,7 +796,7 @@
       }
     })
 
-    // 图片预览
+    // 图片上传预览
     $("#demand_image").onchange = function(e) {
       const wrap = $("#image-preview");
       wrap.innerHTML = "";
@@ -805,7 +812,7 @@
       }
     }
 
-    // 申请人表单提交
+    // 申请人提交表单
     $("#form-applicant").onsubmit = function(e) {
       e.preventDefault();
       const name = $("#applicant_name").value.trim();
@@ -821,11 +828,9 @@
         demandText: $("textarea[name='demand_desc_text']").value.trim(),
         demandLink: $("input[name='demand_link']").value.trim(),
         budgetType: budget,
-        status: "pending_supplier", // pending_supplier / pending_buyer / finished
-        // 供应商字段
+        status: "pending_supplier",
         materialName: "", spec: "", qty: "", unitPrice: "", invoiceType: "",
         shipInclude: "", freight: "", purchaseAmount: 0, totalPrice: 0,
-        // 采购员字段
         isShipped: "", shipRemark: ""
       }
       ledgerData.push(item);
@@ -837,10 +842,10 @@
       $("#document_no").value = docNo;
     }
 
-    // 初始化登记日期
+    // 页面默认填充当前日期
     $("#register_date").value = fmtDate();
 
-    // 供应商：运费显示/隐藏、金额自动计算
+    // 供应商金额自动计算
     function calcSupplierAmount() {
       const q = Number($("#quantity").value) || 0;
       const up = Number($("#unit_price").value) || 0;
@@ -868,7 +873,7 @@
       $(`#${id}`).oninput = calcSupplierAmount;
     })
 
-    // 刷新供应商待办列表
+    // 供应商待办单据列表
     function refreshSupplierTable() {
       const tbody = $("#supplier-pending-body");
       const list = ledgerData.filter(i=>i.status === "pending_supplier");
@@ -906,7 +911,6 @@
       if(!item) return;
       $("#supplier-detail-area").style.display = "block";
       $("#supplier_ledger_id").value = id;
-      // 渲染申请人信息预览
       const preview = $("#supplier-step1-preview");
       preview.innerHTML = `
         <div class="item"><b>单据编号</b>：${item.docNo}</div>
@@ -916,13 +920,11 @@
         <div class="item"><b>需求文字</b>：${item.demandText||"无"}</div>
         <div class="item"><b>需求链接</b>：${item.demandLink||"无"}</div>
       `;
-      // 清空表单
       $("#form-supplier").reset();
       $("#freight-field").style.display = "none";
       $("#purchase_amount").value = "0.00";
       $("#total_price").value = "0.00";
     }
-    // 供应商提交
     $("#form-supplier").onsubmit = function(e) {
       e.preventDefault();
       const lid = Number($("#supplier_ledger_id").value);
@@ -942,7 +944,6 @@
       let total = 0;
       if(inv === "专票") total = (q * up + freight * 1.13) * 1.05;
       else total = (q * up + freight) * 1.18;
-      // 更新单据
       item.materialName = $("#material_name").value.trim();
       item.spec = $("#spec").value.trim();
       item.qty = q;
@@ -959,7 +960,7 @@
       refreshSupplierTable();
     }
 
-    // 采购员模块
+    // 采购员待办列表
     function refreshBuyerTable() {
       const tbody = $("#buyer-pending-body");
       const list = ledgerData.filter(i=>i.status === "pending_buyer");
@@ -1031,7 +1032,7 @@
       refreshBuyerTable();
     }
 
-    // 台账列表模块
+    // 台账总览列表渲染
     function getStatusText(status) {
       const map = {
         "pending_supplier": "待供应商补充",
@@ -1050,23 +1051,20 @@
     }
     function refreshLedgerTable() {
       const tbody = $("#ledger-all-body");
-      // 获取筛选条件
       const statusFilter = $("#filter-status").value;
       const applicantFilter = $("#filter-applicant").value.trim();
       const budgetFilter = $("#filter-budget").value;
-      // 筛选数据
       let list = ledgerData.filter(item=>{
-        const statusMatch = !statusFilter || item.status === statusFilter;
-        const applicantMatch = !applicantFilter || item.applicantName.includes(applicantFilter);
-        const budgetMatch = !budgetFilter || item.budgetType === budgetFilter;
-        return statusMatch && applicantMatch && budgetMatch;
+        const sMatch = !statusFilter || item.status === statusFilter;
+        const aMatch = !applicantFilter || item.applicantName.includes(applicantFilter);
+        const bMatch = !budgetFilter || item.budgetType === budgetFilter;
+        return sMatch && aMatch && bMatch;
       });
+      list.sort((a,b)=>new Date(b.registerDate) - new Date(a.registerDate));
       if(list.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" class="empty">暂无台账数据</td></tr>`;
         return;
       }
-      // 按登记日期倒序排列
-      list.sort((a,b)=>new Date(b.registerDate) - new Date(a.registerDate));
       tbody.innerHTML = "";
       list.forEach(item=>{
         const tr = document.createElement("tr");
@@ -1082,12 +1080,11 @@
         `;
         tbody.appendChild(tr);
       })
-      // 绑定详情按钮
       $$(".view-detail").forEach(btn=>{
         btn.onclick = ()=> showDetailModal(Number(btn.dataset.id));
       })
     }
-    // 显示详情弹窗
+    // 单据详情弹窗
     function showDetailModal(id) {
       const item = ledgerData.find(i=>i.id === id);
       if(!item) return;
@@ -1097,28 +1094,25 @@
         <div class="item"><b>登记日期</b>：${item.registerDate}</div>
         <div class="item"><b>申请人</b>：${item.applicantName}</div>
         <div class="item"><b>预算类型</b>：${item.budgetType}</div>
-        <div class="item"><b>当前状态</b>：${getStatusText(item.status)}</div>
-        <div class="item"><b>需求描述</b>：${item.demandText||"无"}</div>
+        <div class="item"><b>当前单据状态</b>：${getStatusText(item.status)}</div>
+        <div class="item"><b>需求文字描述</b>：${item.demandText||"无"}</div>
         <div class="item"><b>需求链接</b>：${item.demandLink||"无"}</div>
-        <div class="item"><b>物料名称</b>：${item.materialName||"无"}</div>
-        <div class="item"><b>规格型号</b>：${item.spec||"无"}</div>
+        <div class="item"><b>物料名称</b>：${item.materialName||"未填写"}</div>
+        <div class="item"><b>规格型号</b>：${item.spec||"未填写"}</div>
         <div class="item"><b>采购数量</b>：${item.qty||"-"}</div>
         <div class="item"><b>单品单价</b>：${item.unitPrice?item.unitPrice.toFixed(2):"-"}</div>
-        <div class="item"><b>发票类型</b>：${item.invoiceType||"无"}</div>
-        <div class="item"><b>是否含运费</b>：${item.shipInclude||"无"}</div>
+        <div class="item"><b>发票类型</b>：${item.invoiceType||"未填写"}</div>
+        <div class="item"><b>是否含运费</b>：${item.shipInclude||"未填写"}</div>
         <div class="item"><b>运费金额</b>：${item.freight?item.freight.toFixed(2):"-"}</div>
-        <div class="item"><b>采购金额</b>：${item.purchaseAmount.toFixed(2)}</div>
+        <div class="item"><b>采购小计金额</b>：${item.purchaseAmount.toFixed(2)}</div>
         <div class="item"><b>代采总金额</b>：${item.totalPrice.toFixed(2)}</div>
-        <div class="item"><b>发货状态</b>：${item.isShipped||"未填写"}</div>
+        <div class="item"><b>发货状态</b>：${item.isShipped||"未确认"}</div>
         <div class="item"><b>发货备注</b>：${item.shipRemark||"无"}</div>
       `;
       $("#modal-detail").classList.add("show");
     }
-    // 关闭弹窗
-    $("#close-modal").onclick = ()=>{
-      $("#modal-detail").classList.remove("show");
-    }
-    // 筛选事件绑定
+    $("#close-modal").onclick = ()=> $("#modal-detail").classList.remove("show");
+    // 筛选绑定事件
     $("#filter-status").onchange = refreshLedgerTable;
     $("#filter-applicant").oninput = refreshLedgerTable;
     $("#filter-budget").onchange = refreshLedgerTable;
@@ -1130,7 +1124,7 @@
     }
     $("#btn-refresh-ledger").onclick = refreshLedgerTable;
 
-    // 页面初始化
+    // 页面初始化执行
     initBudgetSelect();
     refreshSupplierTable();
     refreshBuyerTable();
